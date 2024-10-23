@@ -6,9 +6,9 @@ const CampaignList = () => {
 
   useEffect(() => {
     const fetchCampaigns = async () => {
-      const data = [aa,bb,cc,dd,ff]
+      //const data = [aa,bb,cc,dd,ff]
       //await getCampaigns();
-      setCampaigns();
+     // setCampaigns();
     };
     fetchCampaigns();
   }, []);

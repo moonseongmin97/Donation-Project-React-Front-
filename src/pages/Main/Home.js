@@ -55,7 +55,7 @@ const images = [
                                 <div className="p-4 rounded bg-white shadow-sm text-center">
                                     <h3 className="fw-bold">기부 현황</h3>
                                     <p>기부금 사용 내역을 확인하세요.</p>
-                                    <Link to="/status" className="btn btn-outline-primary animated-button">기부 현황 보기</Link>
+                                    <Link to="/DonateList" className="btn btn-outline-primary animated-button">기부 현황 보기</Link>
                                 </div>
                             </div>
                             {/* Video Gallery */}
@@ -63,7 +63,7 @@ const images = [
                                 <div className="p-4 rounded bg-white shadow-sm text-center">
                                     <h3 className="fw-bold">영상 갤러리</h3>
                                     <p>감동적인 기부 이야기를 영상으로 만나보세요.</p>
-                                    <Link to="/gallery" className="btn btn-outline-primary animated-button">영상 보러 가기</Link>
+                                    <Link to="/DisplayVod" className="btn btn-outline-primary animated-button">영상 보러 가기</Link>
                                 </div>
                             </div>
                             {/* Donor List */}

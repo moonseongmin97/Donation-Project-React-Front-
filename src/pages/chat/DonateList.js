@@ -5,7 +5,7 @@ import { Button } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import TotAmt from '../Main/TotAmt';
 import ApiCall from '../Common/ApiCall';
-
+//커밋테스트
 function DonateList() {
     const [members, setMembers] = useState([]);
     const [totalAmount, setTotalAmount] = useState(0); // 이달의 총 기부 금액

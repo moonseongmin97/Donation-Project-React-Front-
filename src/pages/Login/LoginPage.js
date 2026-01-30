@@ -67,7 +67,7 @@ function LoginPage() {
           <Container className="px-5">
             <div className="bg-light rounded-3 py-5 px-4 px-md-5 mb-5">
               <div className="text-center mb-5">
-                <h1 className="fw-bolder">로그인</h1>
+                <h1 className="fw-bolder">HopeBridge 로그인</h1>
                 <p className="lead fw-normal text-muted mb-0">계정에 로그인하세요</p>
               </div>
               <Row className="justify-content-center">

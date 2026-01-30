@@ -2,7 +2,7 @@ name: React Frontend CI/CD
 
 on:
   push:
-    branches: [ main ]
+    branches: [ smmoon ]
 
 jobs:
   deploy:

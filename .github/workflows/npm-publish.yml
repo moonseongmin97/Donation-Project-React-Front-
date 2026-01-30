@@ -16,16 +16,15 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build project
-        run: npm run build
+      - name: Install & Build
+        run: |
+          npm install
+          npm run build
         env:
           CI: false
 
-      # 추가된 백업 단계
-      - name: Backup Current Version
+      # 1. 기존 폴더를 일반 폴더로 백업 (압축 안 함)
+      - name: Backup Current Folder
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.HOST }}
@@ -33,15 +32,15 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: 2222
           script: |
-            # 백업 폴더 생성
             sudo mkdir -p /var/www/frontend_backups
-            # 기존 파일이 있으면 날짜별로 압축 (예: frontend_20260130_1530.tar.gz)
-            if [ -d "/var/www/frontend" ]; then
-              sudo tar -czf /var/www/frontend_backups/frontend_$(date +%Y%m%d_%H%M%S).tar.gz -C /var/www/frontend .
-              echo "Backup created successfully."
+            if [ -d "/var/www/html" ]; then
+              # 날짜별 폴더로 통째로 복사
+              sudo cp -r /var/www/html /var/www/frontend_backups/html_$(date +%Y%m%d_%H%M%S)
+              echo "Backup folder created in /var/www/frontend_backups"
             fi
 
-      - name: Deploy to Server via SCP
+      # 2. 새로운 빌드 파일 전송 (기존 html 폴더 내용을 덮어씌움)
+      - name: Deploy to Server
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.HOST }}
@@ -49,11 +48,12 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: 2222
           source: "build/*"
-          target: "/var/www/frontend"
+          target: "/var/www/html"
           strip_components: 1
-          overwrite: true # 기존 파일 덮어쓰기 활성화
+          overwrite: true
 
-      - name: Post Deployment (Nginx Check)
+      # 3. Nginx 재시작 (권한 확인 포함)
+      - name: Post Deployment
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.HOST }}
@@ -61,4 +61,5 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: 2222
           script: |
+            sudo chown -R user:user /var/www/html
             sudo systemctl restart nginx

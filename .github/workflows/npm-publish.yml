@@ -61,5 +61,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: 2222
           script: |
-            sudo chown -R user:user /var/www/html
-            sudo systemctl restart nginx
+              sudo chown -R user:user /var/www/html
+              sudo find /var/www/html -exec touch {} +
+              sudo systemctl restart nginx
+

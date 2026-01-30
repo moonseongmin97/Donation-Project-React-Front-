@@ -1,33 +1,64 @@
-# This workflow will run tests using node and then publish a package to GitHub Packages when a release is created
-# For more information see: https://docs.github.com/en/actions/publishing-packages/publishing-nodejs-packages
-
-name: Node.js Package
+name: React Frontend CI/CD
 
 on:
-  release:
-    types: [created]
+  push:
+    branches: [ main ]
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: npm ci
-      - run: npm test
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-  publish-npm:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
         with:
-          node-version: 20
-          registry-url: https://registry.npmjs.org/
-      - run: npm ci
-      - run: npm publish
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project
+        run: npm run build
         env:
-          NODE_AUTH_TOKEN: ${{secrets.npm_token}}
+          CI: false
+
+      # 추가된 백업 단계
+      - name: Backup Current Version
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          port: 2222
+          script: |
+            # 백업 폴더 생성
+            sudo mkdir -p /var/www/frontend_backups
+            # 기존 파일이 있으면 날짜별로 압축 (예: frontend_20260130_1530.tar.gz)
+            if [ -d "/var/www/frontend" ]; then
+              sudo tar -czf /var/www/frontend_backups/frontend_$(date +%Y%m%d_%H%M%S).tar.gz -C /var/www/frontend .
+              echo "Backup created successfully."
+            fi
+
+      - name: Deploy to Server via SCP
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          port: 2222
+          source: "build/*"
+          target: "/var/www/frontend"
+          strip_components: 1
+          overwrite: true # 기존 파일 덮어쓰기 활성화
+
+      - name: Post Deployment (Nginx Check)
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          port: 2222
+          script: |
+            sudo systemctl restart nginx

@@ -2,7 +2,7 @@ name: React Frontend CI/CD
 
 on:
   push:
-    branches: [ smmoon ]
+    branches: [ smmoon ] # 브랜치 smmoon으로 설정
 
 jobs:
   deploy:
@@ -23,23 +23,30 @@ jobs:
         env:
           CI: false
 
-      # 1. 기존 폴더를 일반 폴더로 백업 (압축 안 함)
-      - name: Backup Current Folder
+      # 1. 기존 html 폴더를 frontend_backups 내부로 시간까지 포함하여 이동(백업)
+      - name: Backup to dedicated folder
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
-          port: 2222
+          port: 2222 # SSH 포트 2222 유지
           script: |
+            # 백업 전용 폴더 생성
             sudo mkdir -p /var/www/frontend_backups
+            
             if [ -d "/var/www/html" ]; then
-              # 날짜별 폴더로 통째로 복사
-              sudo cp -r /var/www/html /var/www/frontend_backups/html_$(date +%Y%m%d_%H%M%S)
-              echo "Backup folder created in /var/www/frontend_backups"
+              # 연월일_시분초 형식으로 백업하여 중복 방지 (예: html_20260130_192005)
+              BACKUP_NAME="html_$(date +%Y%m%d_%H%M%S)"
+              sudo mv /var/www/html "/var/www/frontend_backups/$BACKUP_NAME"
+              echo "Backup created: /var/www/frontend_backups/$BACKUP_NAME"
             fi
+            
+            # 새 파일을 전송받을 깨끗한 html 폴더 생성 및 권한 설정
+            sudo mkdir -p /var/www/html
+            sudo chown -R ${{ secrets.USERNAME }}:${{ secrets.USERNAME }} /var/www/html
 
-      # 2. 새로운 빌드 파일 전송 (기존 html 폴더 내용을 덮어씌움)
+      # 2. 새로운 빌드 파일 전송 (build 폴더 내용물만 전송)
       - name: Deploy to Server
         uses: appleboy/scp-action@master
         with:
@@ -47,12 +54,12 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           port: 2222
-          source: "build/*"
+          source: "build/*" # 빌드 폴더명 build 확인
           target: "/var/www/html"
           strip_components: 1
           overwrite: true
 
-      # 3. Nginx 재시작 (권한 확인 포함)
+      # 3. 권한 정리, 날짜 강제 갱신 및 Nginx 재시작
       - name: Post Deployment
         uses: appleboy/ssh-action@master
         with:
@@ -61,7 +68,10 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: 2222
           script: |
-              sudo chown -R user:user /var/www/html
-              sudo find /var/www/html -exec touch {} +
-              sudo systemctl restart nginx
-
+            # 권한을 user로 재설정
+            sudo chown -R user:user /var/www/html
+            # 서버 시간이 UTC라도, 파일들의 수정 시간을 배포 시점(현재)으로 강제 갱신
+            sudo find /var/www/html -exec touch {} +
+            # Nginx 재시작
+            sudo systemctl restart nginx
+            echo "Deployment and time-stamp update completed."

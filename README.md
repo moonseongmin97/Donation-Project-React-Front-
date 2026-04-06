@@ -191,6 +191,66 @@
 실제 운영 환경을 고려해 Redis 캐싱, JWT 인증, WebSocket 실시간 채팅, 결제 API 연동 등을 적용하고, 네트워크 설정 및 서버 구성까지 직접 다루며 깊이 있는 아키텍처 설계를 고민하고 있습니다.
 이 과정에서 부족한 부분을 채우고, 배운 것을 공유하며 더 나은 방향을 찾고 싶다는 생각이 들었습니다. 앞으로 좋은 동료들과 함께 고민을 나누고, 부족한 점은 채우며, 내가 경험한 것들을 공유하는 개발자로 성장하고 싶습니다.
 
+---
+
+## 인프라 작업 이력
+
+### 2026-04-07 서버 복구 및 HTTPS 적용
+
+#### 서버 환경
+- **서버 IP**: 172.30.1.86 (공인 IP: 121.131.54.221)
+- **SSH 접속**: `ssh -i buddy_key.pem.txt -p 2222 user@172.30.1.86`
+- **자동 시작/종료**: 평일 9시 자동 켜짐, 19시 자동 꺼짐 (크론)
+
+#### systemd 서비스 목록
+| 서비스명 | 포트 | 경로 |
+|----------|------|------|
+| `donation-backend` | 8080 | `/var/www/backend/ROOT.jar` |
+| `donation-chat` | 8082 | `/var/www/chat-server/chat-server.jar` |
+| `donation-kafka-consumer` | 8083 | `/var/www/kafka-consumer/kafka-consumer.jar` |
+| `kafka` | 9092 | `/var/www/kafka/kafka_2.13-3.9.0` |
+| `postgresql` | 5432 | `DONATE_DB1` (비번: 1111) |
+| `redis-server` | 6379 | - |
+
+#### 프론트엔드
+- **서빙 경로**: `/var/www/html` (Nginx)
+- **소스 경로**: `/var/www/frontend/react/Donation-Project-React-Front-/src`
+- **빌드 후 배포**: `npm run build` → `cp -r build/* /var/www/html/`
+
+#### Nginx 설정 (`/etc/nginx/sites-available/default`)
+- `https://myhopebridge.duckdns.org` → `/var/www/html` (프론트)
+- `/api/` → `localhost:8080` (백엔드)
+- `/chat` → `localhost:8082` (채팅 WebSocket)
+- SSL: Let's Encrypt (2026-07-05 만료, 자동갱신)
+
+#### 해결한 문제들
+
+**1. HTTPS 적용 (certbot)**
+```bash
+sudo certbot --nginx -d myhopebridge.duckdns.org
+```
+
+**2. CORS 오류 (403)**
+- 원인: `SecurityConfig.java`에 `localhost:3000`만 허용
+- 해결: `https://myhopebridge.duckdns.org` 추가
+- 파일: `src/main/java/com/example/demo/config/SecurityConfig.java`
+
+**3. WebSocket 연결 실패**
+- 원인 1: 프론트에서 `ws://` → HTTPS 환경에선 `wss://` 사용해야 함
+  - 파일: `src/pages/chat/FloatingChatArea.js` 22번째 줄
+- 원인 2: 채팅 서버 `WebSocketConfig.java`에 도메인 미등록
+  - `setAllowedOrigins`에 `https://myhopebridge.duckdns.org` 추가
+
+#### CI/CD
+- 백엔드: `moonseongmin97/Donation-Project-Spring-Backend--` → master 브랜치 push → 자동 배포
+- 채팅서버: `moonseongmin97/Donation-Project-Spring-chatServer` → main 브랜치 push → 자동 배포
+- 프론트: GitHub `moonseongmin97/Donation-Project-React-Front-` → smmoon 브랜치 (수동 빌드+배포)
+
+#### ⚠️ 주의사항
+- 서버 수동 재시작 시 순서: postgresql → redis-server → kafka → donation-backend → donation-chat → donation-kafka-consumer
+- `ws://` 절대 사용 금지 → HTTPS 환경에서 `wss://`만 동작
+- PostgreSQL/Redis/MySQL은 UFW로 내부망(172.30.0.0/16)만 허용됨
+
 
 
 

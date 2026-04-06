@@ -19,7 +19,7 @@ function FloatingChatArea({ handleCloseChat }) {
     const user = useSelector((state) => state.user.user) || "비회원";
 
     useEffect(() => {
-        const address = "ws://myhopebridge.duckdns.org/chat?roomId=123";
+        const address = "wss://myhopebridge.duckdns.org/chat?roomId=123";
         //const address = "ws://localhost:8082/chat?roomId=123";
         socketRef.current = new WebSocket(address, [], { withCredentials: true });
         socketRef.current.onopen = () => {
